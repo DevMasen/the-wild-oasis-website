@@ -136,14 +136,7 @@ export async function getSettings() {
 
 export async function getCountries() {
   try {
-    const res = await fetch(
-      "https://api.restcountries.com/countries/v5?limit=100&response_fields=names.common",
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.COUNTRIES_API_KEY}`,
-        },
-      },
-    );
+    const res = await fetch("https://countries.dev/countries?field=name,flag");
     const countries = await res.json();
     return countries;
   } catch {
