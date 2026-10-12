@@ -1,7 +1,11 @@
 export const metadata = {
-	title: 'Account',
+  title: "Account",
 };
 
 export default function Page() {
-	return <h2>Your Account</h2>;
+  return (
+    <h2 className="mb-4 text-2xl font-semibold text-accent-400">
+      Welcome, Masein!
+    </h2>
+  );
 }
