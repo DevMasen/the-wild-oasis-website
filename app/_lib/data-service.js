@@ -140,7 +140,7 @@ export async function getSettings() {
 
 export async function getCountries() {
   try {
-    const res = await fetch("https://countries.dev/countries?field=name,flag");
+    const res = await fetch("https://countries.dev/countries?field=name,x");
     const countries = await res.json();
     return countries;
   } catch {
