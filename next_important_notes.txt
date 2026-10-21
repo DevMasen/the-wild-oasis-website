@@ -1,0 +1,521 @@
+NEXT.JS PROJECT — IMPORTANT NOTES
+=================================
+
+Project: the-wild-oasis-website (hotel / cabin booking site)
+Repository: G:\Repositories\DevMasen-repositories\the-wild-oasis-website
+Notes source: actual source code + git history (commits cfd0cd5 .. fb08b42, HEAD)
+
+=================================
+1. PROJECT OVERVIEW
+=================================
+
+- Purpose: Next.js hotel-booking frontend ("The Wild Oasis") for browsing luxury
+  cabins, viewing cabin details, picking reservation dates, and managing a guest
+  account/profile. Built while working through Jonas Schmedtmann's Ultimate
+  React course (commit subjects E422-E467 map to course exercises).
+- Current implementation status: functional reading/browsing features are in
+  place; the write/booking flow is only partially wired (reservation form
+  renders but has no submission handler; reservations page shows a hard-coded
+  empty list; profile form inputs are disabled). Treat it as a course project
+  in progress, not a production app.
+- Next.js version: 14.2.35 (App Router, pages under app/).
+- React version: ^18, plain JavaScript (no TypeScript). jsconfig.json sets the
+  "@/*" alias to the repo root.
+- Main technologies: next, react, react-dom, @supabase/supabase-js, date-fns,
+  react-day-picker, @heroicons/react, tailwindcss, prettier-plugin-tailwindcss.
+- Styling: Tailwind with a custom primary/accent palette (tailwind.config.js),
+  global CSS at app/_styles/globals.css.
+- Data: Supabase (PostgreSQL backend) accessed from server components only
+  through a client singleton at app/_lib/supabase.js. Environment variables are
+  NOT NEXT_PUBLIC, so they stay server-side (per AGENTS.md).
+- Routing: Next.js App Router (file-system routes in app/). No pages/ directory,
+  no API routes, no Route Handlers, no Server Actions in the current code.
+- Verified by reading current source; git history confirms the incremental
+  course-exercise progression. No test framework is installed
+  (AGENTS.md: verification = lint then build).
+
+=================================
+2. PROJECT STRUCTURE
+=================================
+
+app/
+  layout.js             Root layout. HTML/body, global CSS, Josefin_Sans font
+                        (next/font/google), root metadata, Header, and
+                        ReservationProvider wrapper.
+  page.js               Home page: hero image (next/image, static import,
+                        placeholder="blur"), CTA link to /cabins. Server
+                        component.
+  loading.js            Root loading UI (Spinner) shown while any route
+                        segment loads.
+  error.js              Client error boundary ("Something went wrong!" + "Try
+                        again" reset button). Covers the whole app because it
+                        lives in app/.
+  not-found.js          Root not-found UI with "Go back home" link.
+  icon.png              Favicon (referenced via layout metadata history E435).
+
+app/_components/        Shared UI. Components without "use client" are server
+  Cabin.js              components; components with "use client" are client
+  CabinCard.js          components.
+  CabinList.js
+  Counter.js
+  DateSelector.js       "use client". React day-picker range selector. Uses
+                        ReservationContext for range state (wired up in
+                        uncommitted working-tree changes).
+  DeleteReservation.js  Stateless trash button (no handler wired).
+  Filter.js             "use client". capacity filter via URL search params
+                        (useSearchParams/useRouter/usePathname + router.replace).
+  Header.js             Logo + Navigation. Server component.
+  Logo.js               next/image + next/link to "/".
+  Navigation.js         Top nav links: /cabins, /about, /account.
+  ReservationCard.js    Booking row: cabin image, dates, price, status,
+                        past/upcoming badge (date-fns format/formatDistance).
+  ReservationContext.js "use client". Context holding { from, to, setRange }.
+                        Provider mounted in root layout (uncommitted change);
+                        consumed by DateSelector (uncommitted change).
+  ReservationForm.js    Reserve-now form (guest count, observations). Submit
+                        button present but no submission handler — incomplete.
+  Reservations.js       Server component for a cabin: fetches settings +
+                        booked dates in parallel (Promise.all), passes them to
+                        DateSelector and ReservationForm.
+  SelectCountry.js      Server component fetching countries from
+                        https://countries.dev/countries?field=name,x.
+                        Encodes "name%flag" in option values (comment says this
+                        is for a later server action).
+  SideNavigation.js     "use client". Account sidebar; usePathname highlights
+                        active link; next/link for client-side navigation.
+  SignOutButton.js      Static sign-out button (no auth flow wired).
+  Spinner.js / SpinnerMini.js / TextExpander.js / UpdateProfileForm.js
+
+app/_lib/
+  supabase.js           Supabase client singleton. Reads
+                        process.env.SUPABASE_URL and process.env.SUPABASE_API_KEY.
+  data-service.js       All data access: getCabin, getCabinPrice, getCabins,
+                        getGuest, getBooking, getBookings,
+                        getBookedDatesByCabinId, getSettings, getCountries,
+                        createGuest, createBooking, updateGuest, updateBooking,
+                        deleteBooking. Supabase calls + one fetch() for
+                        countries. Not-found handling via next/navigation
+                        notFound() in getCabin.
+
+app/_styles/globals.css Global Tailwind CSS.
+
+app/about/page.js       About page (server component). next/image with local
+                        public images, revalidate = 86400 (ISR), fetches
+                        cabins to display a count.
+
+app/cabins/page.js      Cabins listing. Server component, revalidate = 3600
+                        (ISR), reads searchParams.capacity, renders Filter
+                        (client) inside Suspense with CabinList.
+
+app/cabins/loading.js   Route-segment loading UI for /cabins.
+
+app/cabins/[cabinId]/   Dynamic route. page.js uses generateMetadata +
+                        generateStaticParams, fetches one cabin, wraps
+                        Reservations in Suspense. not-found.js handles bad ids.
+
+app/account/layout.js   Nested layout: SideNavigation + children in a 2-col grid.
+app/account/page.js     Account landing ("Welcome, Masein!").
+app/account/profile/page.js   Update profile: UpdateProfileForm (client) +
+                        SelectCountry (server) as children. Form inputs
+                        disabled — incomplete.
+app/account/reservations/page.js  Reservations list. Hard-coded empty
+                        bookings array — incomplete.
+
+starter/                Leftover course starter (pages/, components/, others/).
+                        NOT used by the active App Router. Do not add features
+                        here (per AGENTS.md).
+
+public/                 Local assets: bg.png, logo.png, about-1.jpg,
+                        about-2.jpg, cabin images, etc.
+
+.next/, out/            Build outputs (present in repo, gitignored or built).
+
+Configuration: next.config.mjs (images.remotePatterns for Supabase storage
+host only), tailwind.config.js, .prettierrc.json, .eslintrc.json,
+postcss.config.mjs, jsconfig.json.
+
+=================================
+3. CORE CONCEPTS AND IMPLEMENTATIONS
+=================================
+
+3.1 App Router and file-system routing
+- Routes are defined by folders/files in app/: page.js = route UI,
+  layout.js = shared UI, loading.js = loading UI, error.js = error UI,
+  not-found.js = 404 UI. Bracketed folders like [cabinId] are dynamic routes;
+  the segment is received as params.cabinId.
+- Nested layouts: app/account/layout.js wraps account pages and adds a sidebar
+  without reloading on navigation between /account, /account/profile,
+  /account/reservations.
+- Linking: next/link is used everywhere (Navigation, CabinCard, Logo). It
+  enables client-side navigation without full page reloads. Anchor <a> tags
+  were replaced by Link over history (e.g. CabinCard, SideNavigation commits).
+
+3.2 Server vs Client Components
+- Default: server components. Data fetching happens on the server (Supabase
+  calls in page components), so secrets never reach the browser and pages can
+  be prerendered.
+- "use client" is added only when interactivity or browser APIs are needed:
+  Filter (router/useSearchParams), DateSelector (useState via context +
+  DayPicker), TextExpander (useState toggle), UpdateProfileForm (useState),
+  SideNavigation (usePathname), ReservationContext (createContext/useState).
+- Client components can be nested inside server components and receive props
+  (CabinList inside cabins/page, Reservations inside [cabinId]/page, Filter
+  inside cabins/page). Boundaries are explicit and deliberate, not
+  "everything is a client component."
+- ReservationProvider is a client component placed at the root layout so
+  range state can be shared between DateSelector and ReservationForm without
+  lifting state to a shared server ancestor.
+
+3.3 Data fetching
+- All fetching is async/await directly in server components/pages; no
+  useEffect data fetching, no SWR/React Query.
+- Data layer is centralized in app/_lib/data-service.js. Each function wraps a
+  Supabase call, logs + throws on error (getCabin additionally calls
+  notFound()). Examples:
+    export async function getCabins() {
+      const { data, error } = await supabase
+        .from("cabins").select("id, name, maxCapacity, regularPrice,
+          discount, image").order("name");
+      if (error) { console.error(error); throw new Error("..."); }
+      return data;
+    }
+- getCabin returns a single record (.single()) and calls notFound() on error,
+  which Next.js converts to the route's not-found UI.
+- Commented-out setTimeout delays remain in data-service.js (e.g. in getCabin,
+  getCabins, getCabinPrice, getSettings) as testing hooks for loading states.
+- getCountries is the only non-Supabase fetch, hitting an external REST API;
+  its query field changed from name,flag to name,x (commit 55b5f1f fix), and
+  the comment references a future server action that does not exist.
+
+3.4 Rendering strategies: SSR, ISR, SSG
+- Server components render on request by default (SSR-like).
+- ISR via export const revalidate:
+    cabins/page.js: revalidate = 3600
+    about/page.js:  revalidate = 86400
+  These are cached and regenerated in the background after the interval.
+- SSG via generateStaticParams() in app/cabins/[cabinId]/page.js:
+    export async function generateStaticParams() {
+      const cabins = await getCabins();
+      return cabins.map(c => ({ cabinId: String(c.id) }));
+    }
+  Prerenders all cabin detail pages at build time. Note: getCabins runs both
+  at build (for params) and at request time (in the page), which is a minor
+  duplication worth knowing.
+- Dynamic metadata via export async function generateMetadata({ params }) in
+  [cabinId]/page.js, returning { title: `Cabin ${name}` }. The root layout
+  also exports a static metadata object with a title template.
+
+3.5 Streaming and loading states
+- React Suspense with fallback={<Spinner />} splits the page into streaming
+  units:
+    cabins/page.js: <Suspense key={filter}><CabinList /></Suspense>
+    [cabinId]/page.js: <Suspense><Reservations /></Suspense>
+- The key={filter} on the cabins Suspense boundary forces a remount when the
+  filter changes, so new data is fetched for the new filter value.
+- Route-level loading.js files: app/loading.js (whole app) and
+  app/cabins/loading.js (/cabins and [cabinId] segment). Originally
+  app/cabins/page.js had its own loading UI; it was moved into a dedicated
+  loading.js (commit E448/E445) to leverage Next.js automatic loading UI.
+- Loading states are immediate (spinner shown while Suspense boundary
+  suspends); there is no artificial delay in production code, only commented
+  test delays.
+
+3.6 Error handling
+- app/error.js: client error boundary for unexpected errors. Receives { error,
+  reset }; clicking "Try again" calls reset() to retry the failing boundary.
+- notFound() in getCabin (data-service.js) triggers 404 handling:
+    app/not-found.js (root), app/cabins/[cabinId]/not-found.js (segment-level).
+- Errors thrown in data-service are caught by the nearest error boundary;
+  getBookings/getSettings/etc. throw generic "could not be loaded" errors.
+
+3.7 Forms, state, mutations
+- No Server Actions. No <form action={...}>. ReservationForm and
+  UpdateProfileForm are plain client components with uncontrolled inputs and
+  buttons that currently do nothing on submit. Mutations exist in
+  data-service.js (createBooking, updateBooking, deleteBooking, createGuest,
+  updateGuest, deleteBooking) but are not called from any UI component.
+- Client-side state: useState in TextExpander, UpdateProfileForm, Counter;
+  useReservation context for date range; useSearchParams/useRouter/usePathname
+  in Filter and SideNavigation.
+- URL as shared state: the cabin capacity filter lives entirely in the URL
+  (?capacity=small). Filter reads useSearchParams and calls router.replace to
+  mutate the query string without reloading. cabins/page reads
+  searchParams.capacity as a server prop and passes it down. This commits
+  filter state to the URL so it is shareable and survives refreshes.
+
+3.8 Images and fonts
+- next/image for all images: remote cabin images from Supabase storage
+  (requires images.remotePatterns entry in next.config.mjs for the
+  ecqqdmjyrtkkceyczkve.supabase.co host), static imports for local public
+  images (bg.png, logo.png, about-1.jpg), and fill/object-cover for
+  responsive cover images.
+- Fonts: Josefin_Sans from next/font/google with subsets: ["latin"] and
+  display: "swap", applied to <body> in layout.js. Self-hosted, eliminates
+  layout shift.
+
+3.9 Authentication / authorization
+- No real auth. getGuest(email) looks up a guest by email (Supabase) and
+  deliberately does not throw when missing ("We handle the possibility of no
+  guest in the sign in callback" comment), but there is no sign-in page or
+  session handling. SignOutButton is a static button. ReservationForm renders
+  "Logged in as" with commented-out user image/name. Treat auth as not
+  implemented.
+
+=================================
+4. GIT DEVELOPMENT HISTORY
+=================================
+
+History contains 24 commits from cfd0cd5 (Initial commit from Create Next App)
+to fb08b42 (HEAD, E467: feat: data fetching strategies). Commit subjects carry
+course-exercise labels (E422-E467). Working tree also has uncommitted changes
+(layout.js, DateSelector.js import ReservationContext; new ReservationContext.js;
+package.json/package-lock.json edits) that wire up reservation context but are
+not yet committed.
+
+Significant commits, chronological:
+
+- cfd0cd5 Initial commit from Create Next App — boilerplate layout/page, Geist
+  fonts, favicon, tailwind, eslint, jsconfig @/* alias.
+- E422: setup routes and pages — created /cabins, /about, /account route stubs.
+- E423: Navigation with Next.js Link — client-side navigation between pages.
+- E424: RootLayout and app structure — layout shell, main content area.
+- 1869737 refactor: clean up some code — code tidy (purpose not stated in
+  message; verified against diff only superficially).
+- E425: fetching data in server component — async page component calling
+  getCabins; first Supabase data use.
+- E427: creating client component — introduced "use client" components.
+- E428: loading state — app/cabins/loading.js and loading UI.
+- E433: project organization — files sorted into app/_components, app/_lib,
+  app/_styles.
+- E434: config tailwind — tailwind.config.js custom primary/accent palette.
+- E435: page metadata and favicon — root metadata + icon.
+- E436: optimizing font — next/font/google Josefin_Sans in layout.
+- E437: improving navigation and root layout — header/sidebar structure.
+- E438: optimizing logo image with next/image — Logo component with
+  next/image (width/height/quality) instead of plain .
+- E439: Building the home page — hero image + CTA.
+- E440: Responsive Images without static import — CabinCard with next/image
+  fill + object-cover using dynamic src from data.
+- E441: Adding nested routes and pages — account/profile, account/reservations,
+  ReservationCard, SelectCountry, expanded data-service (bookings, settings,
+  countries, create/update/delete).
+- 55b5f1f fix: countries api replaced — getCountries URL/query changed
+  (countries.dev field=name,x).
+- E442: nested layout for account page — account/layout.js + SideNavigation +
+  SignOutButton + ReservationCard tweaks.
+- E444: supabase client created — app/_lib/supabase.js singleton; @supabase/
+  supabase-js added to dependencies.
+- E445,446: streaming and loading — loading.js files, Spinner components,
+  next.config.mjs images.remotePatterns for Supabase storage host, CabinCard
+  image + Link conversion.
+- E448: loading on UI components with React Suspense — Suspense boundaries in
+  cabins/page, per-segment loading UI.
+- E449: dynamic route segments — app/cabins/[cabinId]/page.js, getCabin,
+  [cabinId]/loading.js.
+- E450: generate dynamic metadata — generateMetadata({ params }) in cabin page.
+- E451: error boundaries — app/error.js client boundary with reset.
+- E452: not-found errors — notFound() in getCabin, root + segment not-found.js.
+- E455: generateStaticParams — SSG for all cabin detail pages at build.
+- E456: Static Site Generation — added output: "export" to next.config.mjs.
+- 94ba550 fix: change output setting — REMOVED output: "export". Lesson:
+  static export was tried and reverted (incompatible with the app's dynamic
+  data/server requirements).
+- E460: fetching number of cabins — about page shows cabin count; revalidate
+  added.
+- E463: Client components in Server components — TextExpander created ("use
+  client") and used inside server-rendered Cabin/page; Logo reformatted.
+- E464: Highlight active navigation link — SideNavigation became a client
+  component using usePathname + next/link to highlight the active account link.
+- E465: sharing state between client and server via URL — Filter component,
+  ?capacity query param, router.replace, CabinList accepts filter prop,
+  searchParams read in cabins/page.
+- E466: server components in client component — profile page split into
+  UpdateProfileForm (client) wrapper with SelectCountry (server) passed as
+  children; demonstrates server components can be passed as children to client
+  components.
+- E467: data fetching strategies (HEAD) — extracted Cabin and Reservations
+  components from [cabinId]/page, Suspense around Reservations, DateSelector/
+  ReservationForm receive props, commented test delays adjusted to 2000ms.
+
+Uncommitted (working tree, not in git): ReservationContext.js added;
+layout.js wraps {children} in ReservationProvider; DateSelector.js consumes
+useReservation and wires DayPicker onSelect/selected to the context range.
+This is an in-progress step for sharing reservation date state between client
+components; git history does not yet contain a commit for it.
+
+=================================
+5. KEY TECHNICAL DECISIONS
+=================================
+
+- App Router, no pages/: follows Next.js 14 conventions; layouts, loading,
+  error, and not-found UI are file-based. Verified in app/ structure.
+- Central server data layer (_lib/data-service.js + _lib/supabase.js): keeps
+  Supabase logic out of components, makes reuse (getCabins used by cabins,
+  about, [cabinId]) and testing delays easy to manage.
+- Server components by default, client only where needed: avoids shipping
+  interactivity to the browser unnecessarily; keeps Supabase keys server-side
+  (env vars are not NEXT_PUBLIC).
+- next/image for every image (remote allow-list in next.config.mjs): automatic
+  optimization, but remote hosts must be listed or builds fail.
+- URL-based filter state (?capacity): persists filters, makes them linkable,
+  avoids a global state library.
+- Suspense + streaming: cabin page shell renders immediately while the slower
+  Reservations component streams in, improving perceived performance.
+- notFound() in getCabin: declarative 404 without try/catch in the page.
+- Reverted output: "export": shows static export was considered but does not
+  fit a dynamic, server-data-driven app; next.config.mjs no longer has it.
+- @/* alias (jsconfig.json): absolute imports like "@/app/_lib/data-service"
+  instead of relative paths.
+
+Trade-offs / caveats:
+- generateStaticParams runs getCabins at build AND the page calls getCabin at
+  request time; if cabin data changes after build, metadata/params may be stale
+  until rebuild or revalidation.
+- Client components nested in Suspense boundaries: ReservationForm/DateSelector
+  are client but rendered inside a server Suspense boundary — valid, but the
+  boundary suspends on the server-side data they depend on (Reservations is
+  async server component).
+- No Server Actions: mutations (createBooking etc.) exist in data-service but
+  are not invoked from any form, so booking cannot actually be completed.
+
+=================================
+6. COMMON PITFALLS AND LESSONS
+=================================
+
+1. Missing next/image remote host -> build failure.
+   Evidence: next.config.mjs images.remotePatterns lists only the Supabase
+   storage host; it was added in commit E445,446 right when remote cabin
+   images were introduced. Any new image host must be added here.
+
+2. "use client" placement matters.
+   Evidence: Filter, DateSelector, TextExpander, UpdateProfileForm,
+   SideNavigation, ReservationContext all declare "use client" at the top.
+   Forgetting it breaks hooks (useState/useSearchParams/usePathname) in
+   components that need them; overusing it moves data fetching to the client.
+
+3. notFound() vs throwing.
+   Evidence: getCabin calls notFound() on Supabase error; getBookings/
+   getSettings throw. notFound() is the correct way to surface a 404 in server
+   components; throwing produces a 500/error-boundary instead.
+
+4. Static export is not compatible with this app.
+   Evidence: commit E456 added output: "export" and commit 94ba550 removed it.
+   Do not re-add without confirming the app no longer needs dynamic server
+   data.
+
+5. Env var names are server-only.
+   Evidence: app/_lib/supabase.js reads process.env.SUPABASE_URL and
+   process.env.SUPABASE_API_KEY. They must be defined in .env.local and are
+   not exposed to the browser because they lack the NEXT_PUBLIC_ prefix.
+   Never hardcode or log these values.
+
+6. Filter key={filter} remounts Suspense boundary.
+   Evidence: cabins/page.js wraps CabinList in <Suspense key={filter}> so
+   changing the capacity filter refetches data. Removing the key would reuse
+   the boundary and could show stale data.
+
+7. Commented-out setTimeout delays.
+   Evidence: multiple functions in data-service.js contain
+   // await new Promise((res) => setTimeout(res, 2000));. They are test hooks,
+   not production delays; leaving them commented is intentional but easy to
+   miss when debugging slow loads.
+
+8. Incomplete write flow.
+   Evidence: ReservationForm submit button, DeleteReservation, and
+   UpdateProfileForm have no handlers; reservations page hard-codes
+   bookings = []; data-service mutation functions are defined but never
+   called. Do not assume booking/profile updates work.
+
+9. Auth comments can be misleading.
+   Evidence: getGuest says missing guest is handled in "the sign in
+   callback", but no sign-in callback/UI exists. SelectCountry's comment
+   mentions splitting values "later in the server action", but no server
+   action exists. Treat such comments as roadmap notes, not implemented
+   behavior.
+
+=================================
+7. CONFIGURATION AND COMMANDS
+=================================
+
+npm scripts (package.json):
+  npm run dev    — dev server at http://localhost:3000 (Turbopack)
+  npm run build  — production build (.next/, out/)
+  npm run start  — production server (run after build)
+  npm run lint   — ESLint with next/core-web-vitals
+  npm run prod   — next build && next start
+
+Relevant configuration:
+  next.config.mjs   images.remotePatterns for
+                    https://ecqqdmjyrtkkceyczkve.supabase.co
+                    /storage/v1/object/public/cabin-images/**.
+                    (output: "export" was added then reverted — do not re-add.)
+  tailwind.config.js custom primary/accent color scale; content paths cover
+  app/ only (not starter/).
+  .prettierrc.json    prettier-plugin-tailwindcss enabled.
+  jsconfig.json       path alias "@/*" -> repo root.
+  .eslintrc.json      eslint-config-next.
+
+Required environment variables (values are secret — do not commit or log):
+  SUPABASE_URL
+  SUPABASE_API_KEY
+  Supplied via .env.local (gitignored). Per AGENTS.md, copy values from an
+  existing local .env.local or ask the team; do not guess.
+
+Routing constraints:
+  Dynamic segment [cabinId] is passed to pages as params.cabinId.
+  Search params (?capacity) are read as page props (searchParams) in server
+  components and via useSearchParams in client components.
+
+Server/client boundary pitfalls:
+  - Hooks and event handlers only in "use client" components.
+  - Supabase client must be instantiated and used in server components only.
+  - A client component cannot directly import and call async server data
+    functions unless those functions are Server Actions (none exist here);
+    data should be fetched in a server ancestor and passed down as props.
+
+=================================
+8. CURRENT STATE AND OPEN QUESTIONS
+=================================
+
+Complete / verified:
+  Cabin browsing, listing, detail pages; dynamic metadata; SSG params; ISR
+  revalidation; streaming/Suspense loading; error and not-found UI; account
+  navigation shell; image/font optimization; URL-based filtering.
+
+Incomplete / unconfirmed (based on current source only):
+  - Booking submission: ReservationForm has no submit handler; createBooking/
+    deleteBooking/updateBooking in data-service are unused.
+  - Reservations list: hard-coded empty array in account/reservations/page.js.
+  - Profile update: inputs disabled; UpdateProfileForm state (count) is a
+    placeholder; no submission.
+  - Authentication: no sign-in/sign-up/session; SignOutButton static.
+  - Working-tree changes (ReservationContext wiring) are uncommitted and not
+    yet part of any commit; confirm they are finished before building on them.
+
+Areas worth investigating next:
+  - Add Server Actions or route handlers to wire ReservationForm/delete
+    booking to data-service mutations.
+  - Connect getGuest to an actual sign-in flow if auth is required.
+  - Decide whether to reintroduce output: "export" (static hosting) or keep
+    the Node/server runtime.
+
+=================================
+9. QUICK REVIEW CHECKLIST
+=================================
+
+[ ] App Router: page.js/layout.js/loading.js/error.js/not-found.js roles
+[ ] Server components fetch data; "use client" only for interactivity
+[ ] next/image requires remote host in next.config.mjs images.remotePatterns
+[ ] Env vars SUPABASE_URL / SUPABASE_API_KEY are server-only, not NEXT_PUBLIC
+[ ] Data layer: app/_lib/data-service.js + app/_lib/supabase.js singleton
+[ ] notFound() in getCabin produces a 404; throwing produces an error boundary
+[ ] generateStaticParams() prerenders /cabins/[cabinId] pages at build
+[ ] generateMetadata({ params }) sets dynamic page titles
+[ ] export const revalidate enables ISR (cabins: 3600s, about: 86400s)
+[ ] Suspense boundaries stream slow UI; key={filter} remounts on filter change
+[ ] URL (?capacity) is the source of truth for cabin filtering; router.replace
+[ ] next/link for navigation; next/font/google for self-hosted fonts
+[ ] @supabase/supabase-js client singleton in app/_lib/supabase.js
+[ ] Booking/profile forms render but have no submission handlers (incomplete)
+[ ] output: "export" was tried and reverted — static export not currently used
+[ ] starter/ folder is unused; do not add features there
