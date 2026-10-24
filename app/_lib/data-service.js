@@ -1,5 +1,5 @@
 import { eachDayOfInterval } from "date-fns";
-import supabase from "./supabase";
+import supabase from "@/app/_lib/supabase";
 import { notFound } from "next/navigation";
 /////////////
 // GET
@@ -144,7 +144,9 @@ export async function getSettings() {
 
 export async function getCountries() {
   try {
-    const res = await fetch("https://countries.dev/countries?field=name,x");
+    const res = await fetch(
+      "https://countries.dev/countries?fields=name,flags",
+    );
     const countries = await res.json();
     return countries;
   } catch {
