@@ -2,6 +2,7 @@
 
 import { auth, signIn, signOut } from "@/app/_lib/auth";
 import { updateGuest as updateGuestApi } from "./data-service";
+import { revalidatePath } from "next/cache";
 
 export async function signInAction() {
   await signIn("google", { redirectTo: "/account" });
@@ -22,4 +23,5 @@ export async function updateGuest(formData) {
 
   const updateData = { nationalID, nationality, countryFlag };
   await updateGuestApi(session.user.guestId, updateData);
+  revalidatePath("/account/profile");
 }
