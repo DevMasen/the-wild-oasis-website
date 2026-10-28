@@ -73,6 +73,8 @@ export async function getBooking(id) {
     .eq("id", id)
     .single();
 
+  // await new Promise((res) => setTimeout(res, 5000));
+
   if (error) {
     console.error(error);
     throw new Error("Booking could not get loaded");

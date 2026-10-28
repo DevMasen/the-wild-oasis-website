@@ -8,6 +8,13 @@ const nextConfig = {
         port: "",
         pathname: "/storage/v1/object/public/cabin-images/**",
       },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        port: "",
+        pathname:
+          "/a/ACg8ocJ7I4BlrwOqAMVZbz6XVqklndh2zb6v2zTjq5LdJVzKikeBxW8=s96-c/**",
+      },
     ],
   },
 };

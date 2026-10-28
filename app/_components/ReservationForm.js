@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 // import { useReservation } from "@/app/_components/ReservationContext";
 
 function ReservationForm({ cabin, user }) {
@@ -12,14 +14,17 @@ function ReservationForm({ cabin, user }) {
         <p>Logged in as</p>
 
         <div className="flex items-center gap-4">
-          <img
-            // Important to display google profile images
-            referrerPolicy="no-referrer"
-            className="h-8 rounded-full"
-            src={user.image}
-            alt={user.name}
-          />
           <p>{user.name}</p>
+          <div className="relative aspect-square h-8">
+            <Image
+              fill
+              // Important to display google profile images
+              referrerPolicy="no-referrer"
+              className="h-8 rounded-full object-cover"
+              src={user.image}
+              alt={user.name}
+            />
+          </div>
         </div>
       </div>
 
