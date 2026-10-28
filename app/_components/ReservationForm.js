@@ -1,12 +1,30 @@
 "use client";
 
 import Image from "next/image";
+import { createBooking } from "@/app/_lib/actions";
 
-// import { useReservation } from "@/app/_components/ReservationContext";
+import { useReservation } from "@/app/_components/ReservationContext";
+import { differenceInDays } from "date-fns";
+import SubmitButton from "@/app/_components/SubmitButton";
 
 function ReservationForm({ cabin, user }) {
-  const { maxCapacity } = cabin;
-  // const { range } = useReservation();
+  const { maxCapacity, regularPrice, discount, id: cabinId } = cabin;
+  const { range, resetRange } = useReservation();
+
+  const startDate = range?.from;
+  const endDate = range?.to;
+  const numNights = differenceInDays(endDate, startDate);
+  const cabinPrice = numNights * (regularPrice - discount);
+
+  const bookingData = {
+    startDate,
+    endDate,
+    numNights,
+    cabinPrice,
+    cabinId,
+  };
+
+  const createBookingWithData = createBooking.bind(null, bookingData);
 
   return (
     <div className="scale-[1.01]">
@@ -28,7 +46,13 @@ function ReservationForm({ cabin, user }) {
         </div>
       </div>
 
-      <form className="flex flex-col gap-5 bg-primary-900 px-16 py-10 text-lg">
+      <form
+        action={(formData) => {
+          createBookingWithData(formData);
+          resetRange();
+        }}
+        className="flex flex-col gap-5 bg-primary-900 px-16 py-10 text-lg"
+      >
         <div className="space-y-2">
           <label htmlFor="numGuests">How many guests?</label>
           <select
@@ -61,11 +85,13 @@ function ReservationForm({ cabin, user }) {
         </div>
 
         <div className="flex items-center justify-end gap-6">
-          <p className="text-base text-primary-300">Start by selecting dates</p>
-
-          <button className="bg-accent-500 px-8 py-4 font-semibold text-primary-800 transition-all hover:bg-accent-600 disabled:cursor-not-allowed disabled:bg-gray-500 disabled:text-gray-300">
-            Reserve now
-          </button>
+          {!(range?.to && range?.from) ? (
+            <p className="text-base text-primary-300">
+              Start by selecting dates
+            </p>
+          ) : (
+            <SubmitButton pendingText="Reserving...">Reserve now</SubmitButton>
+          )}
         </div>
       </form>
     </div>

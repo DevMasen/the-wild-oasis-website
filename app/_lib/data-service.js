@@ -2,7 +2,7 @@ import { eachDayOfInterval } from "date-fns";
 import supabase from "@/app/_lib/supabase";
 import { notFound } from "next/navigation";
 /////////////
-// GET
+//! GET
 
 export async function getCabin(id) {
   const { data, error } = await supabase
@@ -157,7 +157,7 @@ export async function getCountries() {
 }
 
 /////////////
-// CREATE
+//! CREATE
 
 export async function createGuest(newGuest) {
   const { data, error } = await supabase.from("guests").insert([newGuest]);
@@ -187,7 +187,7 @@ export async function createBooking(newBooking) {
 }
 
 /////////////
-// UPDATE
+//! UPDATE
 
 // The updatedFields is an object which should ONLY contain the updated data
 export async function updateGuest(id, updatedFields) {
@@ -221,7 +221,7 @@ export async function updateBooking(id, updatedFields) {
 }
 
 /////////////
-// DELETE
+//! DELETE
 
 export async function deleteBooking(id) {
   const { data, error } = await supabase.from("bookings").delete().eq("id", id);

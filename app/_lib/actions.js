@@ -3,13 +3,15 @@
 import { auth, signIn, signOut } from "@/app/_lib/auth";
 import {
   updateGuest as updateGuestApi,
-  deleteBooking,
+  createBooking as createBookingApi,
   updateBooking as updateBookingApi,
+  deleteBooking as deleteBookingApi,
   getBookings,
 } from "@/app/_lib/data-service";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+//! SignIn and SignOut
 export async function signInAction() {
   await signIn("google", { redirectTo: "/account" });
 }
@@ -18,6 +20,7 @@ export async function signOutAction() {
   await signOut({ redirectTo: "/" });
 }
 
+//! Guest Area
 export async function updateGuest(formData) {
   // Authentication
   const session = await auth();
@@ -35,21 +38,33 @@ export async function updateGuest(formData) {
   revalidatePath("/account/profile");
 }
 
-export async function deleteReservation(bookingId) {
+//! Bookings Area
+export async function createBooking(bookingData, formData) {
   // Authentication
   const session = await auth();
   if (!session) throw new Error("You must login to your account!");
 
-  // Authorization: Each guest is just allowed to delete its own booking
-  const guestBookings = await getBookings(session.user.guestId);
-  const guestBookingIds = guestBookings.map((booking) => booking.id);
-  if (!guestBookingIds.includes(bookingId))
-    throw new Error("You are not allowed to delete this booking!");
+  // Building new Data
+  const newBooking = {
+    ...bookingData,
+    guestId: session.user.guestId,
+    numGuests: Number(formData.get("numGuests")),
+    observations: formData.get("observations")?.slice(0, 1000),
+    extrasPrice: 0,
+    totalPrice: bookingData.cabinPrice,
+    status: "unconfirmed",
+    hasBreakfast: false,
+    isPaid: false,
+  };
 
-  // throw new Error("On Demand Server Error!");
+  // Mutation
+  await createBookingApi(newBooking);
 
-  await deleteBooking(bookingId);
-  revalidatePath("/account/reservations");
+  // Revalidation
+  revalidatePath(`/cabins/${bookingData.cabinId}`);
+
+  // Redirecting
+  redirect("/cabins/thankyou");
 }
 
 export async function updateBooking(formData) {
@@ -68,7 +83,7 @@ export async function updateBooking(formData) {
   // 3.Building Update Data
   const updateData = {
     numGuests: Number(formData.get("numGuests")),
-    observations: formData.get("observations"),
+    observations: formData.get("observations").slice(0, 1000),
   };
 
   // 4,5.Mutation and Error Handling
@@ -80,4 +95,21 @@ export async function updateBooking(formData) {
 
   // 7. Redirecting
   redirect("/account/reservations");
+}
+
+export async function deleteBooking(bookingId) {
+  // Authentication
+  const session = await auth();
+  if (!session) throw new Error("You must login to your account!");
+
+  // Authorization: Each guest is just allowed to delete its own booking
+  const guestBookings = await getBookings(session.user.guestId);
+  const guestBookingIds = guestBookings.map((booking) => booking.id);
+  if (!guestBookingIds.includes(bookingId))
+    throw new Error("You are not allowed to delete this booking!");
+
+  // throw new Error("On Demand Server Error!");
+
+  await deleteBookingApi(bookingId);
+  revalidatePath("/account/reservations");
 }
