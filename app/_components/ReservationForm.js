@@ -14,7 +14,6 @@ function ReservationForm({ cabin, user }) {
         <p>Logged in as</p>
 
         <div className="flex items-center gap-4">
-          <p>{user.name}</p>
           <div className="relative aspect-square h-8">
             <Image
               fill
@@ -25,6 +24,7 @@ function ReservationForm({ cabin, user }) {
               alt={user.name}
             />
           </div>
+          <p>{user.name}</p>
         </div>
       </div>
 
