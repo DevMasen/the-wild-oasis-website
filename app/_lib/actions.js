@@ -3,7 +3,7 @@
 import { auth, signIn, signOut } from "@/app/_lib/auth";
 import {
   updateGuest as updateGuestApi,
-  deleteBooking as deleteBookingApi,
+  deleteBooking,
   updateBooking as updateBookingApi,
   getBookings,
 } from "@/app/_lib/data-service";
@@ -35,7 +35,7 @@ export async function updateGuest(formData) {
   revalidatePath("/account/profile");
 }
 
-export async function deleteBooking(bookingId) {
+export async function deleteReservation(bookingId) {
   // Authentication
   const session = await auth();
   if (!session) throw new Error("You must login to your account!");
@@ -46,7 +46,9 @@ export async function deleteBooking(bookingId) {
   if (!guestBookingIds.includes(bookingId))
     throw new Error("You are not allowed to delete this booking!");
 
-  await deleteBookingApi(bookingId);
+  // throw new Error("On Demand Server Error!");
+
+  await deleteBooking(bookingId);
   revalidatePath("/account/reservations");
 }
 
