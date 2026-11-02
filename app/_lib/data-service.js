@@ -38,6 +38,21 @@ export async function getCabinPrice(id) {
   return data;
 }
 
+export async function getCabinForBooking(id) {
+  const { data, error } = await supabase
+    .from("cabins")
+    .select("id, maxCapacity, regularPrice, discount")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    throw new Error("Cabin could not be loaded");
+  }
+
+  return data;
+}
+
 export const getCabins = async function () {
   const { data, error } = await supabase
     .from("cabins")
@@ -129,6 +144,23 @@ export async function getBookedDatesByCabinId(cabinId) {
     .flat();
 
   return bookedDates;
+}
+
+export async function isCabinAvailable(cabinId, startDate, endDate) {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("cabinId", cabinId)
+    .lt("startDate", endDate)
+    .gt("endDate", startDate)
+    .limit(1);
+
+  if (error) {
+    console.error(error);
+    throw new Error("Cabin availability could not be checked");
+  }
+
+  return data.length === 0;
 }
 
 export async function getSettings() {

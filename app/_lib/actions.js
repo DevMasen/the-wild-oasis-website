@@ -4,10 +4,14 @@ import { auth, signIn, signOut } from "@/app/_lib/auth";
 import {
   updateGuest as updateGuestApi,
   createBooking as createBookingApi,
+  getCabinForBooking,
+  isCabinAvailable,
+  getSettings,
   updateBooking as updateBookingApi,
   deleteBooking as deleteBookingApi,
   getBookings,
 } from "@/app/_lib/data-service";
+import { differenceInCalendarDays, format, isValid, parseISO } from "date-fns";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -39,19 +43,78 @@ export async function updateGuest(formData) {
 }
 
 //! Bookings Area
-export async function createBooking(bookingData, formData) {
+export async function createBooking(formData) {
   // Authentication
   const session = await auth();
   if (!session) throw new Error("You must login to your account!");
 
+  const cabinId = Number(formData.get("cabinId"));
+  if (!Number.isSafeInteger(cabinId) || cabinId <= 0)
+    throw new Error("Invalid cabin!");
+
+  const startDateValue = formData.get("startDate");
+  const endDateValue = formData.get("endDate");
+  if (
+    typeof startDateValue !== "string" ||
+    typeof endDateValue !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(startDateValue) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(endDateValue)
+  )
+    throw new Error("Invalid reservation dates!");
+
+  const startDate = parseISO(startDateValue);
+  const endDate = parseISO(endDateValue);
+  if (
+    !isValid(startDate) ||
+    !isValid(endDate) ||
+    format(startDate, "yyyy-MM-dd") !== startDateValue ||
+    format(endDate, "yyyy-MM-dd") !== endDateValue ||
+    startDateValue <= new Date().toISOString().slice(0, 10)
+  )
+    throw new Error("Invalid reservation dates!");
+
+  const numNights = differenceInCalendarDays(endDate, startDate);
+  if (numNights <= 0) throw new Error("Invalid reservation dates!");
+
+  const [cabin, settings] = await Promise.all([
+    getCabinForBooking(cabinId),
+    getSettings(),
+  ]);
+  if (!cabin) throw new Error("Cabin does not exist!");
+  if (
+    numNights < settings.minBookingLength ||
+    numNights + 1 > settings.maxBookingLength
+  )
+    throw new Error("Reservation length is outside the allowed range!");
+
+  const numGuests = Number(formData.get("numGuests"));
+  if (
+    !Number.isSafeInteger(numGuests) ||
+    numGuests < 1 ||
+    numGuests > cabin.maxCapacity
+  )
+    throw new Error("Invalid number of guests!");
+
+  if (!(await isCabinAvailable(cabinId, startDateValue, endDateValue)))
+    throw new Error("Cabin is not available for the selected dates!");
+
+  const observations = formData.get("observations");
+  if (typeof observations !== "string")
+    throw new Error("Invalid reservation details!");
+
+  const cabinPrice = numNights * (cabin.regularPrice - cabin.discount);
+
   // Building new Data
   const newBooking = {
-    ...bookingData,
+    startDate: startDateValue,
+    endDate: endDateValue,
+    numNights,
+    cabinId,
     guestId: session.user.guestId,
-    numGuests: Number(formData.get("numGuests")),
-    observations: formData.get("observations")?.slice(0, 1000),
+    numGuests,
+    observations: observations.slice(0, 1000),
     extrasPrice: 0,
-    totalPrice: bookingData.cabinPrice,
+    totalPrice: cabinPrice,
     status: "unconfirmed",
     hasBreakfast: false,
     isPaid: false,
@@ -61,7 +124,7 @@ export async function createBooking(bookingData, formData) {
   await createBookingApi(newBooking);
 
   // Revalidation
-  revalidatePath(`/cabins/${bookingData.cabinId}`);
+  revalidatePath(`/cabins/${cabinId}`);
 
   // Redirecting
   redirect("/cabins/thankyou");

@@ -4,27 +4,15 @@ import Image from "next/image";
 import { createBooking } from "@/app/_lib/actions";
 
 import { useReservation } from "@/app/_components/ReservationContext";
-import { differenceInDays } from "date-fns";
+import { differenceInDays, format } from "date-fns";
 import SubmitButton from "@/app/_components/SubmitButton";
 
 function ReservationForm({ cabin, user }) {
-  const { maxCapacity, regularPrice, discount, id: cabinId } = cabin;
-  const { range, resetRange } = useReservation();
+  const { maxCapacity, id: cabinId } = cabin;
+  const { range } = useReservation();
 
   const startDate = range?.from;
   const endDate = range?.to;
-  const numNights = differenceInDays(endDate, startDate);
-  const cabinPrice = numNights * (regularPrice - discount);
-
-  const bookingData = {
-    startDate,
-    endDate,
-    numNights,
-    cabinPrice,
-    cabinId,
-  };
-
-  const createBookingWithData = createBooking.bind(null, bookingData);
 
   return (
     <div className="scale-[1.01]">
@@ -47,12 +35,20 @@ function ReservationForm({ cabin, user }) {
       </div>
 
       <form
-        action={(formData) => {
-          createBookingWithData(formData);
-          resetRange();
-        }}
+        action={createBooking}
         className="flex flex-col gap-5 bg-primary-900 px-16 py-10 text-lg"
       >
+        <input type="hidden" name="cabinId" value={cabinId} />
+        <input
+          type="hidden"
+          name="startDate"
+          value={startDate ? format(startDate, "yyyy-MM-dd") : ""}
+        />
+        <input
+          type="hidden"
+          name="endDate"
+          value={endDate ? format(endDate, "yyyy-MM-dd") : ""}
+        />
         <div className="space-y-2">
           <label htmlFor="numGuests">How many guests?</label>
           <select
